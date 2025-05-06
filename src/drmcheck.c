@@ -94,7 +94,7 @@ int main() {
         }
 
         conn->id = drm_conn->connector_id;
-        snprintf(conn->name, sizeof conn->name, "%s-%s"PRIu32,
+        snprintf(conn->name, sizeof conn->name, "%s-%"PRIu32,
             conn_str(drm_conn->connector_type),
             drm_conn->connector_type_id);
 
@@ -122,7 +122,7 @@ int main() {
             goto cleanup; 
         }
 
-        printf("-> Using CRTC %s"PRIu32"\n", conn->crtc_id);
+        printf("-> Using CRTC %s"PRIu32"\n", conn->name);
 
 
 
