@@ -2,3 +2,4 @@ drm_test
 daemon-screen.code-workspace
 *.o
 *.h.gch
+.VSCodeCounter
