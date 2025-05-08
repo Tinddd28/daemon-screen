@@ -17,7 +17,7 @@
 
 #include <drm_fourcc.h>
 
-#include "util.h"
+#include <util.h>
 
 #define DRM_DEVICE "/dev/dri/card0"
 

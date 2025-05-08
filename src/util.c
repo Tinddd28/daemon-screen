@@ -1,4 +1,4 @@
-#include "util.h"
+#include <util.h>
 
 #include <stdint.h>
 #include <xf86drm.h>
