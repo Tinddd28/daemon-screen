@@ -1,23 +1,55 @@
 #include <mydrm.h>
-#include <usage.h>
-
+#include <kms.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 int main() {
-    printf("DRM modes:\n");
 
-    int fd = drm_open("/dev/dri/card0");
+    int ret, fd;
+    const char *card = "/dev/dri/card0";
+    struct drm_device *iter;
+    ret = drm_open(&fd, card);
+    if (ret) {
+        errno = -ret;
+        fprintf(stderr, "failed to open drm device %s: %s\n", card, strerror(errno));
+        return ret;
+    }
+    // ret = drmSetMaster(fd);
+    // if (ret) {
+    //     fprintf(stderr, "failed to set drm master: %s\n", strerror(errno));
+    //     close(fd);
+    //     return ret;
+    // }
+    ret = drm_device_prepare(fd);
+    if (ret) 
+        close(fd);
 
-    struct drm_mode_card_res res;
+    for (iter = drm_devices_list; iter; iter = iter->next) {
+        if (!iter) {
+            fprintf(stderr, "Invalid device in list\n");
+            continue;
+        }
 
-    if (drm_get_resources(fd, &res)) {
-        printf("failed to open card resources\n");
-        return -1;
+        iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc_id);
+        if (!iter->saved_crtc) {
+            fprintf(stderr, "Failed to get CRTC for connector %u\n", iter->conn_id);
+            continue;
+        }
+
+        // ret = drmModeSetCrtc(fd, iter->crtc_id, iter->fb_id,
+        //     0, 0, &iter->conn_id, 1, &iter->mode);
+        // if (ret) {
+        //     fprintf(stderr, "failed to set CRTC to connector %u (%s)\n",
+        //         iter->conn_id, strerror(errno));
+        //     continue;
+        // }
     }
 
-    printf("DRM connectors count: %d", res.count_connectors);
+    // if (drm_devices_list) {
+    //     save_framebuffer("./test.bmp", drm_devices_list);
+    // }
     
-
-    return 0;
+    return ret;
 }
