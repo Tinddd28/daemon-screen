@@ -1,3 +1,4 @@
+#ifndef KMS_H
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -22,7 +23,7 @@
 
 typedef struct ds_kms_dma_buf ds_kms_dma_buf;
 typedef struct ds_kms_item ds_kms_item;
-
+typedef struct ds_kms_result ds_kms_result;
 
 typedef enum {
     PLANE_PROPERTY_X = 1 << 0,
@@ -64,13 +65,6 @@ typedef enum {
     KMS_RESULT_FAILED_TO_SEND
 } return_kms_result;
 
-struct ds_kms_result {
-    int result;
-    ds_kms_item items[DS_KMS_MAX_ITEMS];
-    char err_msg[128];
-    int num_items;
-};
-
 struct ds_kms_item {
     ds_kms_dma_buf dma_buf[DS_KMS_MAX_DMA_BUFS];
     int num_dma_bufs;
@@ -87,3 +81,11 @@ struct ds_kms_item {
     int src_h;
     struct hdr_output_metadata hdr_metadata;
 };
+struct ds_kms_result{
+    int result;
+    ds_kms_item items[DS_KMS_MAX_ITEMS];
+    char err_msg[128];
+    int num_items;
+};
+
+#endif

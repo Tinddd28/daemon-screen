@@ -2,6 +2,7 @@
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include <drm_fourcc.h>
 
 bool connector_get_property_by_name(int drmfd, drmModeConnectorPtr props, 
     const char *name, uint64_t *result) {
@@ -143,6 +144,77 @@ void map_crtc_to_connector_ids(ds_drm *drm, connector_to_crtc_map *c2crtc_map) {
     drmModeFreeResources(res);
 }
 
+
+static bool get_hdr_metadata(int drm_fd, uint64_t hdr_metadata_blob_id, struct hdr_output_metadata *hdr_metadata) {
+    drmModePropertyBlobPtr hdr_metadata_blob = drmModeGetPropertyBlob(drm_fd, hdr_metadata_blob_id);
+    if(!hdr_metadata_blob)
+        return false;
+
+    if(hdr_metadata_blob->length >= sizeof(struct hdr_output_metadata))
+        *hdr_metadata = *(struct hdr_output_metadata*)hdr_metadata_blob->data;
+
+    drmModeFreePropertyBlob(hdr_metadata_blob);
+    return true;
+}
+
+int drm_prime_handles_to_fds(ds_drm *drm, drmModeFB2Ptr drmfb, int *fb_fds) {
+    for (int i = 0; i < DS_KMS_MAX_DMA_BUFS; ++i) {
+        if (!drmfb->handles[i]) {
+            return i;
+        }
+
+        const int ret = drmPrimeHandleToFD(drm->drm_fd, drmfb->handles[i], O_RDONLY, &fb_fds[i]);
+        if (ret != 0 || fb_fds[i] < 0) {
+            return i;
+        }
+    }
+    return DS_KMS_MAX_DMA_BUFS;
+}
+
+int done(drmModePlaneResPtr planes, ds_kms_result *result, int *ret) {
+    if (planes) {
+        drmModeFreePlaneResources(planes);
+    }
+    if (result->num_items > 0) 
+        result->result = KMS_RESULT_OK;
+    if (result->result == KMS_RESULT_OK) {
+        ret = 0;
+    } else {
+        for (int i = 0; i < result->num_items; ++i) {
+            for (int j = 0; j < result->items[i].num_dma_bufs; ++j) {
+                ds_kms_dma_buf *dma_buf = &result->items[i].dma_buf[j];
+                if (dma_buf->fd > 0) {
+                    close(dma_buf->fd);
+                    dma_buf->fd = -1;
+                }
+            }
+            result->items[i].num_dma_bufs = 0;
+        }
+        result->num_items = 0;
+    }
+    return ret;
+}
+
+static void drm_mode_cleanup_handles(int drmfd, drmModeFB2Ptr drmfb) {
+    for(int i = 0; i < 4; ++i) {
+        if(!drmfb->handles[i])
+            continue;
+
+        bool already_closed = false;
+        for(int j = 0; j < i; ++j) {
+            if(drmfb->handles[i] == drmfb->handles[j]) {
+                already_closed = true;
+                break;
+            }
+        }
+
+        if(already_closed)
+            continue;
+
+        drmCloseBufferHandle(drmfd, drmfb->handles[i]);
+    }
+}
+
 int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
     int ret = -1;
     result->result = KMS_RESULT_OK;
@@ -150,7 +222,7 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
     result->num_items = 0;
 
     connector_to_crtc_map c2crtc_map;
-    c2crtc_map.maps = 0;
+    c2crtc_map.num_maps = 0;
     map_crtc_to_connector_ids(drm, &c2crtc_map);
     
     drmModePlaneResPtr planes = drmModeGetPlaneResources(drm->drm_fd);
@@ -246,40 +318,3 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
     return ret;
 }
 
-int drm_prime_handles_to_fds(ds_drm *drm, drmModeFB2Ptr drmfb, int *fb_fds) {
-    for (int i = 0; i < DS_KMS_MAX_DMA_BUFS; ++i) {
-        if (!drmfb->handles[i]) {
-            return i;
-        }
-
-        const int ret = drmPrimeHandleToFD(drm->drm_fd, drmfb->handles[i], O_RDONLY, &fb_fds[i]);
-        if (ret != 0 || fb_fds[i] < 0) {
-            return i;
-        }
-    }
-    return DS_KMS_MAX_DMA_BUFS;
-}
-
-int done(drmModePlaneResPtr planes, ds_kms_result *result, int *ret) {
-    if (planes) {
-        drmModeFreePlaneResources(planes);
-    }
-    if (result->num_items > 0) 
-        result->result = KMS_RESULT_OK;
-    if (result->result == KMS_RESULT_OK) {
-        ret = 0;
-    } else {
-        for (int i = 0; i < result->num_items; ++i) {
-            for (int j = 0; j < result->items[i].num_dma_bufs; ++j) {
-                ds_kms_dma_buf *dma_buf = &result->items[i].dma_buf[j];
-                if (dma_buf->fd > 0) {
-                    close(dma_buf->fd);
-                    dma_buf->fd = -1;
-                }
-            }
-            result->items[i].num_dma_bufs = 0;
-        }
-        result->num_items = 0;
-    }
-    return ret;
-}
