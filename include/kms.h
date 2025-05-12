@@ -88,4 +88,6 @@ struct ds_kms_result{
     int num_items;
 };
 
+extern int kms_get_fb(ds_drm *drm, ds_kms_result *result);
+
 #endif
