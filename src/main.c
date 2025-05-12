@@ -36,6 +36,7 @@ int main() {
     if (kms_get_fb(&drm, &result) == 0) {
         printf("something happened");
     }
+    printf("after kms_get_fb\n");
 
     for (int i = 0; i < result.num_items; ++i) {
         for (int j = 0; j < result.items[i].num_dma_bufs; ++j) {

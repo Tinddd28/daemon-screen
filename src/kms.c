@@ -23,7 +23,12 @@ bool connector_get_property_by_name(int drmfd, drmModeConnectorPtr props,
 uint32_t plane_get_properties(int drmfd, uint32_t plane_id, int *x, int *y, 
     int *src_x, int *src_y, int *src_w, int *src_h) 
 {
-    *x, *y, *src_x, *src_y, *src_w, *src_h = 0;
+    *x = 0;
+    *y = 0;
+    *src_x = 0;
+    *src_y = 0;
+    *src_w = 0;
+    *src_h = 0;
 
     plane_property_mask mask = 0;
     drmModeObjectPropertiesPtr props = drmModeObjectGetProperties(drmfd, plane_id, DRM_MODE_OBJECT_PLANE);
@@ -90,7 +95,7 @@ uint32_t plane_get_properties(int drmfd, uint32_t plane_id, int *x, int *y,
     return mask;
 }
 
-const connector_crtc_pair *get_connector_pair_by_crtc_id(
+const connector_crtc_pair *get_connector_pair_by_crtc_id (
     const connector_to_crtc_map *c2crtc_map,
     uint32_t crtc_id
 ) {
@@ -171,7 +176,7 @@ int drm_prime_handles_to_fds(ds_drm *drm, drmModeFB2Ptr drmfb, int *fb_fds) {
     return DS_KMS_MAX_DMA_BUFS;
 }
 
-int done(drmModePlaneResPtr planes, ds_kms_result *result, int *ret) {
+int done(drmModePlaneResPtr planes, ds_kms_result *result, int ret) {
     if (planes) {
         drmModeFreePlaneResources(planes);
     }
@@ -195,7 +200,7 @@ int done(drmModePlaneResPtr planes, ds_kms_result *result, int *ret) {
     return ret;
 }
 
-static void drm_mode_cleanup_handles(int drmfd, drmModeFB2Ptr drmfb) {
+void drm_mode_cleanup_handles(int drmfd, drmModeFB2Ptr drmfb) {
     for(int i = 0; i < 4; ++i) {
         if(!drmfb->handles[i])
             continue;
@@ -223,18 +228,19 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
 
     connector_to_crtc_map c2crtc_map;
     c2crtc_map.num_maps = 0;
+    printf("before map crtc2c\n");
     map_crtc_to_connector_ids(drm, &c2crtc_map);
-    
+    printf("after map crtc2c\n");
     drmModePlaneResPtr planes = drmModeGetPlaneResources(drm->drm_fd);
     if (!planes) {
         fprintf(stderr, "failed to get plane resources\n");
-        return done(planes, &result, -1);
+        return done(planes, result, -1);
     }
-
+    printf("planeRes count: %d\n", planes->count_planes);
     for (uint32_t i = 0; i < planes->count_planes; ++i) {
         drmModePlanePtr plane = NULL;
         drmModeFB2Ptr drmfb = NULL;
-
+        printf("before drmModeGetPlane, #(%d): \n", i+1);
         plane = drmModeGetPlane(drm->drm_fd, planes->planes[i]);
         if (!plane) {
             snprintf(result->err_msg, sizeof(result->err_msg), "failed to get drm plane with id %u, error: %s\n", planes->planes[i], strerror(errno));
@@ -243,14 +249,19 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
             if(plane)
                 drmModeFreePlane(plane);
         }
+        printf("after drmModeGetPlane, #(%d): \n", i+1);
 
-        if (!plane->fb_id) {
+        printf("planes crtc_id: %d\n", plane->crtc_id);
+
+        if (!plane->fb_id || plane->fb_id == 0) {
             if(drmfb)
                 drmModeFreeFB2(drmfb);
             if(plane)
                 drmModeFreePlane(plane); 
+            continue;
         }
-
+        printf("plane fb_id: %d, #(%d)\n", plane->fb_id, i+1);
+        printf("before drmModeGetFB2, #(%d): \n", i+1);
         drmfb = drmModeGetFB2(drm->drm_fd, plane->fb_id);
         if (!drmfb) {
             snprintf(result->err_msg, sizeof(result->err_msg), "failed to get drm fb with id %u, error: %s\n", plane->fb_id, strerror(errno));
@@ -259,7 +270,7 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
             if(plane)
                 drmModeFreePlane(plane);
         }
-
+        printf("after drmModeGetFB2, #(%d): \n", i+1);
         if (!drmfb->handles[0]) {
             result->result = KMS_RESULT_FAILED_TO_GET_PLANE;
             snprintf(result->err_msg, sizeof(result->err_msg), "drmfb handle is NULL");
