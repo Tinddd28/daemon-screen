@@ -45,6 +45,8 @@ int main() {
                 close(dma_buf->fd);
                 dma_buf->fd = -1;
             }
+
+            printf("something: %u\n", result.items);
         }
         result.items[i].num_dma_bufs = 0;
     }
