@@ -6,50 +6,47 @@
 #include <stdio.h>
 
 int main() {
-
-    int ret, fd;
+    int res = 0;
     const char *card = "/dev/dri/card0";
-    struct drm_device *iter;
-    ret = drm_open(&fd, card);
-    if (ret) {
-        errno = -ret;
-        fprintf(stderr, "failed to open drm device %s: %s\n", card, strerror(errno));
-        return ret;
+    ds_drm drm;
+    drm.drm_fd = 0;
+
+    drm.drm_fd = open(card, O_RDONLY);
+    if (drm.drm_fd < 0) {
+        fprintf(stderr, "failed to open %s, error: %s", card, strerror(errno));
+        res = 2;
+        close(drm.drm_fd);
+        return res;
     }
-    // ret = drmSetMaster(fd);
-    // if (ret) {
-    //     fprintf(stderr, "failed to set drm master: %s\n", strerror(errno));
-    //     close(fd);
-    //     return ret;
-    // }
-    ret = drm_device_prepare(fd);
-    if (ret) 
-        close(fd);
-
-    for (iter = drm_devices_list; iter; iter = iter->next) {
-        if (!iter) {
-            fprintf(stderr, "Invalid device in list\n");
-            continue;
-        }
-
-        iter->saved_crtc = drmModeGetCrtc(fd, iter->crtc_id);
-        if (!iter->saved_crtc) {
-            fprintf(stderr, "Failed to get CRTC for connector %u\n", iter->conn_id);
-            continue;
-        }
-
-        // ret = drmModeSetCrtc(fd, iter->crtc_id, iter->fb_id,
-        //     0, 0, &iter->conn_id, 1, &iter->mode);
-        // if (ret) {
-        //     fprintf(stderr, "failed to set CRTC to connector %u (%s)\n",
-        //         iter->conn_id, strerror(errno));
-        //     continue;
-        // }
+    printf("drm device opened\n");
+    if (drmSetClientCap(drm.drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
+        fprintf(stderr, "drmSetClientCap: DRM_CLIENT_CAP_UNIVERSAL_PLANES failed, error: %s\n", strerror(errno));
+        res = 2;
+        close(drm.drm_fd);
+        return res;
     }
 
-    // if (drm_devices_list) {
-    //     save_framebuffer("./test.bmp", drm_devices_list);
-    // }
-    
-    return ret;
-}
+    if (drmSetClientCap(drm.drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) != 0){
+        fprintf(stderr, "drmSetClientCap DRM_CLIENT_CAP_ATOMIC failed, error: %s", strerror(errno));
+    }
+
+    ds_kms_result result;
+    result.num_items = 0;
+    printf("hello\n");
+    if (kms_get_fb(&drm, &result) == 0) {
+        printf("something happened");
+    }
+
+    for (int i = 0; i < result.num_items; ++i) {
+        for (int j = 0; j < result.items[i].num_dma_bufs; ++j) {
+            ds_kms_dma_buf *dma_buf = &result.items[i].dma_buf[j];
+            if (dma_buf->fd > 0) {
+                close(dma_buf->fd);
+                dma_buf->fd = -1;
+            }
+        }
+        result.items[i].num_dma_bufs = 0;
+    }
+    result.num_items = 0;
+
+} 
