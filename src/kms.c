@@ -1,4 +1,4 @@
-#include <kms.h>
+#include "../include/kms.h"
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
