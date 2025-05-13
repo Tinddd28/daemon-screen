@@ -1,1 +1,7 @@
 drm_test
+daemon-screen.code-workspace
+*.o
+*.h.gch
+.VSCodeCounter
+.idea/
+my_program
