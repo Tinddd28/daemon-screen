@@ -106,11 +106,11 @@ func GetKmsResult(drm *DsDrm) (*KmsResult, error) {
 		return nil, fmt.Errorf("failed to get KMS result: %s", C.GoString((*C.char)(unsafe.Pointer(&cResult.err_msg))))
 	}
 
-	items := make([]KmsItem, cResult.NumItems)
-	for i := 0; i < cResult.NumItems; i++ {
+	items := make([]KmsItem, cResult.num_items)
+	for i := 0; i < int(cResult.num_items); i++ {
 		cItem := &cResult.items[i]
-		dmaBufs := make([]DmaBuf, int(cResult.num_dma_bufs))
-		for j := 0; j < int(cResult.num_dma_bufs); j++ {
+		dmaBufs := make([]DmaBuf, int(cItem.num_dma_bufs))
+		for j := 0; j < int(cItem.num_dma_bufs); j++ {
 			dmaBufs[j] = DmaBuf{
 				FD:     int(cItem.dma_buf[j].fd),
 				Pitch:  uint32(cItem.dma_buf[j].pitch),
@@ -124,12 +124,12 @@ func GetKmsResult(drm *DsDrm) (*KmsResult, error) {
 			PixelFormat:    uint32(cItem.pixel_format),
 			Modifier:       uint64(cItem.modifier),
 			ConnectorId:    uint32(cItem.connector_id),
-			IsCursor:       uint32(cItem.is_cursor),
-			HasHdrMetadata: uint32(cItem.has_hdr_metadata),
+			IsCursor:       bool(cItem.is_cursor),
+			HasHdrMetadata: bool(cItem.has_hdr_metadata),
 			X:              int(cItem.x),
 			Y:              int(cItem.y),
-			SrcW:           int(cItem.SrcW),
-			SrcH:           int(cItem.SrcH),
+			SrcW:           int(cItem.src_w),
+			SrcH:           int(cItem.src_h),
 			HdrMetadata:    C.GoString((*C.char)(unsafe.Pointer(&cItem.hdr_metadata))),
 		}
 	}
@@ -137,7 +137,7 @@ func GetKmsResult(drm *DsDrm) (*KmsResult, error) {
 	return &KmsResult{
 		Result:   int(cResult.result),
 		Items:    items,
-		ErrMsg:   C.GoString((*C.char)(unsafe.Pointer(&cItem.err_msg))),
+		ErrMsg:   C.GoString((*C.char)(unsafe.Pointer(&cResult.err_msg))),
 		NumItems: int(cResult.num_items),
 	}, nil
 }
