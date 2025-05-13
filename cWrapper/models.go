@@ -1,5 +1,8 @@
 package cwrapper
 
+// #cgo CFLAGS: -I/usr/include/libdrm -I./include -I./src
+
+// #cgo LDFLAGS:  -ldrm -lgbm -lm
 // #include <stdlib.h>
 // #include <string.h>
 // #include "../include/kms.h"
