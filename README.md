@@ -4,7 +4,7 @@ The functionality was based on [GPU Screen Recorder](https://git.dec05eba.com/gp
 
 ## Build Go:
 ```
-CGO_CFLAGS="-I/usr/include/libdrm -I./src" \ CGO_LDFLAGS="-ldrm" go build -o my_program
+CGO_CFLAGS="-I/usr/include/libdrm -I./src" CGO_LDFLAGS="-ldrm" go build -o my_program
 ```
 
 ## Build C:
