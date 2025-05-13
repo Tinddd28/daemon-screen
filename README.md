@@ -31,5 +31,5 @@ groups
 ```
 - How to add:
 ```
-sudo usermod -aG "username"
+sudo usermod -aG video "username"
 ```
