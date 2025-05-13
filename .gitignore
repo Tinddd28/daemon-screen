@@ -4,3 +4,4 @@ daemon-screen.code-workspace
 *.h.gch
 .VSCodeCounter
 .idea/
+my_program
