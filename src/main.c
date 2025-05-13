@@ -6,28 +6,14 @@
 #include <stdio.h>
 
 int main() {
-    int res = 0;
     const char *card = "/dev/dri/card0";
+
     ds_drm drm;
     drm.drm_fd = 0;
 
-    drm.drm_fd = open(card, O_RDONLY);
-    if (drm.drm_fd < 0) {
-        fprintf(stderr, "failed to open %s, error: %s", card, strerror(errno));
-        res = 2;
-        close(drm.drm_fd);
-        return res;
-    }
-    printf("drm device opened\n");
-    if (drmSetClientCap(drm.drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
-        fprintf(stderr, "drmSetClientCap: DRM_CLIENT_CAP_UNIVERSAL_PLANES failed, error: %s\n", strerror(errno));
-        res = 2;
-        close(drm.drm_fd);
-        return res;
-    }
-
-    if (drmSetClientCap(drm.drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) != 0){
-        fprintf(stderr, "drmSetClientCap DRM_CLIENT_CAP_ATOMIC failed, error: %s", strerror(errno));
+    if (open_drm_device(card, &drm)) {
+        printf("failed to open drm device %s", strerror(errno));
+        return -errno;
     }
 
     ds_kms_result result;
@@ -46,10 +32,10 @@ int main() {
                 dma_buf->fd = -1;
             }
 
-            printf("something: %u\n", result.items);
         }
         result.items[i].num_dma_bufs = 0;
     }
     result.num_items = 0;
 
+    printf("something: %u\n", result.items);
 } 

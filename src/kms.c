@@ -240,7 +240,6 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
     for (uint32_t i = 0; i < planes->count_planes; ++i) {
         drmModePlanePtr plane = NULL;
         drmModeFB2Ptr drmfb = NULL;
-        printf("before drmModeGetPlane, #(%d): \n", i+1);
         plane = drmModeGetPlane(drm->drm_fd, planes->planes[i]);
         if (!plane) {
             snprintf(result->err_msg, sizeof(result->err_msg), "failed to get drm plane with id %u, error: %s\n", planes->planes[i], strerror(errno));
@@ -248,10 +247,9 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
                 drmModeFreeFB2(drmfb);
             if(plane)
                 drmModeFreePlane(plane);
+            continue;
         }
-        printf("after drmModeGetPlane, #(%d): \n", i+1);
 
-        printf("planes crtc_id: %d\n", plane->crtc_id);
 
         if (!plane->fb_id || plane->fb_id == 0) {
             if(drmfb)
@@ -261,7 +259,6 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
             continue;
         }
         printf("plane fb_id: %d, #(%d)\n", plane->fb_id, i+1);
-        printf("before drmModeGetFB2, #(%d): \n", i+1);
         drmfb = drmModeGetFB2(drm->drm_fd, plane->fb_id);
         if (!drmfb) {
             snprintf(result->err_msg, sizeof(result->err_msg), "failed to get drm fb with id %u, error: %s\n", plane->fb_id, strerror(errno));
@@ -269,12 +266,13 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
                 drmModeFreeFB2(drmfb);
             if(plane)
                 drmModeFreePlane(plane);
+            continue;
         }
-        printf("after drmModeGetFB2, #(%d): \n", i+1);
         if (!drmfb->handles[0]) {
             result->result = KMS_RESULT_FAILED_TO_GET_PLANE;
             snprintf(result->err_msg, sizeof(result->err_msg), "drmfb handle is NULL");
             drm_mode_cleanup_handles(drm->drm_fd, drmfb);        
+            continue;
         }
         
         int x = 0, y = 0, src_x = 0, src_y = 0, src_w = 0, src_h = 0;
@@ -288,6 +286,7 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
             result->result = KMS_RESULT_FAILED_TO_GET_PLANE;
             snprintf(result->err_msg, sizeof(result->err_msg), "failed to get fd from drm handle, error: %s", strerror(errno));
             drm_mode_cleanup_handles(drm->drm_fd, drmfb);
+            continue;
         }
 
         const int item_index = result->num_items;
@@ -329,3 +328,26 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
     return ret;
 }
 
+int open_drm_device(const char *card, ds_drm *drm) {
+    int res = 0;
+
+    drm->drm_fd = open(card, O_RDONLY);
+    if (drm->drm_fd < 0) {
+        fprintf(stderr, "failed to open %s, error: %s", card, strerror(errno));
+        res = 2;
+        close(drm->drm_fd);
+        return res;
+    }
+    printf("drm device opened\n");
+    if (drmSetClientCap(drm->drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
+        fprintf(stderr, "drmSetClientCap: DRM_CLIENT_CAP_UNIVERSAL_PLANES failed, error: %s\n", strerror(errno));
+        res = 2;
+        close(drm->drm_fd);
+        return res;
+    }
+
+    if (drmSetClientCap(drm->drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) != 0){
+        fprintf(stderr, "drmSetClientCap DRM_CLIENT_CAP_ATOMIC failed, error: %s", strerror(errno));
+    }
+    return res;
+}

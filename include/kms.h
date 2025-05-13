@@ -1,4 +1,5 @@
 #ifndef KMS_H
+#define KMS_h
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -93,5 +94,5 @@ void map_crtc_to_connector_ids(ds_drm *drm, connector_to_crtc_map *c2crtc_map);
 const connector_crtc_pair *get_connector_pair_by_crtc_id (const connector_to_crtc_map *c2crtc_map,uint32_t crtc_id);
 uint32_t plane_get_properties(int drmfd, uint32_t plane_id, int *x, int *y, int *src_x, int *src_y, int *src_w, int *src_h);
 bool connector_get_property_by_name(int drmfd, drmModeConnectorPtr props, const char *name, uint64_t *result);
-
+int open_drm_device(const char *card, ds_drm *drm);
 #endif

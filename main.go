@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	cwrapper "daemon-screen/cWrapper"
+)
 
 func main() {
-	fmt.Println("Hello")
+	cwrapper.Res()
 }
