@@ -1,4 +1,4 @@
-package cwrapper
+package cwrap
 
 // #cgo CFLAGS: -I/usr/include/libdrm -I./src
 
@@ -10,7 +10,6 @@ import "C"
 
 import (
 	"fmt"
-	"log"
 	"unsafe"
 )
 
@@ -107,14 +106,4 @@ func GetKmsResult(drm *DsDrm) (*KmsResult, error) {
 		ErrMsg:   C.GoString((*C.char)(unsafe.Pointer(&cResult.err_msg))),
 		NumItems: int(cResult.num_items),
 	}, nil
-}
-
-func Res() {
-	drm, err := OpenDrmDevice("/dev/dri/card0")
-	if err != nil {
-		log.Fatal(err)
-		panic(err)
-	}
-	log.Println("DRM device opened successfully")
-	log.Println(drm.DRMFd)
 }
