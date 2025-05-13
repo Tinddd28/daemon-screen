@@ -228,15 +228,15 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
 
     connector_to_crtc_map c2crtc_map;
     c2crtc_map.num_maps = 0;
-    printf("before map crtc2c\n");
+    // printf("before map crtc2c\n");
     map_crtc_to_connector_ids(drm, &c2crtc_map);
-    printf("after map crtc2c\n");
+    // printf("after map crtc2c\n");
     drmModePlaneResPtr planes = drmModeGetPlaneResources(drm->drm_fd);
     if (!planes) {
         fprintf(stderr, "failed to get plane resources\n");
         return done(planes, result, -1);
     }
-    printf("planeRes count: %d\n", planes->count_planes);
+    // printf("planeRes count: %d\n", planes->count_planes);
     for (uint32_t i = 0; i < planes->count_planes; ++i) {
         drmModePlanePtr plane = NULL;
         drmModeFB2Ptr drmfb = NULL;
@@ -258,7 +258,7 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
                 drmModeFreePlane(plane); 
             continue;
         }
-        printf("plane fb_id: %d, #(%d)\n", plane->fb_id, i+1);
+        // printf("plane fb_id: %d, #(%d)\n", plane->fb_id, i+1);
         drmfb = drmModeGetFB2(drm->drm_fd, plane->fb_id);
         if (!drmfb) {
             snprintf(result->err_msg, sizeof(result->err_msg), "failed to get drm fb with id %u, error: %s\n", plane->fb_id, strerror(errno));
@@ -338,7 +338,7 @@ int open_drm_device(const char *card, ds_drm *drm) {
         close(drm->drm_fd);
         return res;
     }
-    printf("drm device opened\n");
+    // printf("drm device opened\n");
     if (drmSetClientCap(drm->drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
         fprintf(stderr, "drmSetClientCap: DRM_CLIENT_CAP_UNIVERSAL_PLANES failed, error: %s\n", strerror(errno));
         res = 2;

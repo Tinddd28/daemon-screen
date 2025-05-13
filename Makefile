@@ -12,8 +12,8 @@ OBJS = $(SRCS:.c=.o)
 
 DEPS = include/mydrm.h include/kms.h
 
-go:
-	CGO_CFLAGS="-I/usr/include/libdrm -I./src" CGO_LDFLAGS="-ldrm" go build -o my_program
+# go:
+# 	CGO_CFLAGS="-I/usr/include/libdrm -I./src" CGO_LDFLAGS="-ldrm" go build -o my_program
 
 all: $(TARGET)
 
@@ -27,4 +27,4 @@ clean:
 	rm -f $(OBJS) $(TARGET) && rm my_program
 
 
-.PHONY: all clean
+.PHONY: all clean go
