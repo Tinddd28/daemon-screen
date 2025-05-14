@@ -23,7 +23,7 @@ int main() {
         printf("something happened");
     }
     printf("after kms_get_fb\n");
-
+    get_map(&result);
     for (int i = 0; i < result.num_items; ++i) {
         for (int j = 0; j < result.items[i].num_dma_bufs; ++j) {
             ds_kms_dma_buf *dma_buf = &result.items[i].dma_buf[j];
@@ -37,5 +37,5 @@ int main() {
     }
     result.num_items = 0;
 
-    printf("something: %u\n", result.items);
+    
 } 

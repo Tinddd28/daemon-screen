@@ -353,4 +353,62 @@ int open_drm_device(const char *card, ds_drm *drm) {
     return res;
 }
 
-void *map_dma_buf(int fd, )
+void *map_dma_buf(int fd, size_t size, uint32_t offset) {
+    size_t page_size = sysconf(_SC_PAGESIZE);
+    size_t aligned_offset = (offset / page_size) * page_size;
+    size_t extra_offset = offset - aligned_offset;
+
+    void *data = mmap(NULL, size + extra_offset, PROT_READ, MAP_SHARED, fd, aligned_offset);
+    if (data == MAP_FAILED) {
+        perror("mmap failed");
+        return NULL;
+    }
+    return (uint8_t *)data + extra_offset;
+}
+
+void unmap_dma_buf(void *addr, size_t size, size_t offset) {
+    size_t page_size = sysconf(_SC_PAGESIZE);
+    size_t aligned_offset = (offset / page_size) * page_size;
+    size_t extra_offset = offset - aligned_offset;
+
+    munmap((uint8_t *)addr - extra_offset, size + extra_offset);
+}
+
+void get_map(ds_kms_result *result) {
+    printf("start get map\n");
+    for (int i = 0; i < result->num_items; ++i) {
+        ds_kms_item *item = &result->items[i];
+        printf("Processing item ( #%d ):\n", i+1);
+        printf("\tResolution: %ux%u\n", item->width, item->height);
+        printf("\tPixelFormat (0x%X)\n", item->pixel_format);
+        printf("\tModifier: %lu\n", item->modifier);
+        printf("\tConnectorId: %u\n", item->connector_id);
+        printf("\tIsCursor: %s\n", item->is_cursor ? "true" : "false");
+        printf("\tHasHdrMetadata: %s\n", item->has_hdr_metadata ? "true" : "false");
+        for (int j = 0; j < item->num_dma_bufs; ++j) {
+            ds_kms_dma_buf *dma_buf = &item->dma_buf[j];
+
+            // size_t size = item->height * dma_buf->pitch;
+            // void *data = map_dma_buf(dma_buf, size, dma_buf->offset);
+            // if (!data) {
+            //     fprintf(stderr, "failed to map DMA-BUF for item ( #%d ), buffer ( #%d )", i, j);
+            //     continue;
+            // }
+
+            printf("\t\tDmaBuf ( #%d )\n", j+1);
+            printf("\t\t\tFD: %d\n", dma_buf->fd);
+            printf("\t\t\tPitch: %u\n", dma_buf->pitch);
+            printf("\t\t\tOffset: %d\n", dma_buf->offset);
+            
+            // uint8_t *pixel_data = (uint8_t *)data;
+            // uint8_t r = pixel_data[2];
+            // uint8_t g = pixel_data[1];
+            // uint8_t b = pixel_data[0];
+            // uint8_t a = pixel_data[4];
+
+            // printf("\t\t\tFirst Pixel: R=%u; G=%u; B=%u; A=%u\n", r, g, b, a);
+
+            // unmap_dma_buf(data, size, dma_buf->offset);
+        }
+    }
+}

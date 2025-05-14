@@ -24,7 +24,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(TARGET) && rm my_program
+	rm -f $(OBJS) $(TARGET) 
 
 
-.PHONY: all clean go
+.PHONY: all clean 
