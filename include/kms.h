@@ -95,4 +95,6 @@ const connector_crtc_pair *get_connector_pair_by_crtc_id (const connector_to_crt
 uint32_t plane_get_properties(int drmfd, uint32_t plane_id, int *x, int *y, int *src_x, int *src_y, int *src_w, int *src_h);
 bool connector_get_property_by_name(int drmfd, drmModeConnectorPtr props, const char *name, uint64_t *result);
 int open_drm_device(const char *card, ds_drm *drm);
+void *map_dma_buf(int fd, size_t size, uint32_t offset);
+int unmap_dma_buf(void *addr, size_t size);
 #endif

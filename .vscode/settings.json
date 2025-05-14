@@ -2,6 +2,11 @@
     "files.associations": {
         "fcntl.h": "c",
         "stdio.h": "c",
-        "xf86drmmode.h": "c"
+        "xf86drmmode.h": "c",
+        "mman.h": "c",
+        "xf86drm.h": "c",
+        "stdarg.h": "c",
+        "drm.h": "c",
+        "stdint.h": "c"
     }
 }

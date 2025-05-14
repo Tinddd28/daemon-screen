@@ -3,6 +3,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include <drm_fourcc.h>
+#include <sys/mman.h>
 
 bool connector_get_property_by_name(int drmfd, drmModeConnectorPtr props, 
     const char *name, uint64_t *result) {
@@ -351,3 +352,5 @@ int open_drm_device(const char *card, ds_drm *drm) {
     }
     return res;
 }
+
+void *map_dma_buf(int fd, )
