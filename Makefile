@@ -6,11 +6,11 @@ LDFLAGS = -ldrm
 
 TARGET = drm_test
 
-SRCS = src/main.c src/mydrm.c src/kms.c
+SRCS = src/main.c s src/kms.c
 
 OBJS = $(SRCS:.c=.o)
 
-DEPS = include/mydrm.h include/kms.h
+DEPS = include/kms.h
 
 # go:
 # 	CGO_CFLAGS="-I/usr/include/libdrm -I./src" CGO_LDFLAGS="-ldrm" go build -o my_program
