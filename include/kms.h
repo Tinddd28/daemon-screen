@@ -97,5 +97,5 @@ bool connector_get_property_by_name(int drmfd, drmModeConnectorPtr props, const 
 int open_drm_device(const char *card, ds_drm *drm);
 void *map_dma_buf(int fd, size_t size, uint32_t offset);
 void unmap_dma_buf(void *addr, size_t size, size_t offset);
-void get_map(ds_kms_result *result);
+void print_result(ds_kms_result *result);
 #endif
