@@ -1,12 +1,12 @@
 # 	gcc include/util.h src/util.c src/drmcheck.c -o drm_test -ldrm -I/usr/include/libdrm    
 
 CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude -I/usr/include/libdrm
-LDFLAGS = -ldrm
+CFLAGS = -Wall -Wextra -Iinclude -I/usr/include/libdrm -I/usr/include/EGL -I/usr/include/GLES2
+LDFLAGS = -ldrm -lEGL -lGLESv2 -lgbm -L/usr/lib/x86_64-linux-gnu/  
 
 TARGET = drm_test
 
-SRCS = src/main.c  src/kms.c
+SRCS = src/main.c src/kms.c src/draw.c
 
 OBJS = $(SRCS:.c=.o)
 

@@ -23,6 +23,8 @@ int main() {
     }
     printf("after kms_get_fb\n");
     print_result(&result);
+
+    res(&result, drm);
     for (int i = 0; i < result.num_items; ++i) {
         for (int j = 0; j < result.items[i].num_dma_bufs; ++j) {
             ds_kms_dma_buf *dma_buf = &result.items[i].dma_buf[j];
