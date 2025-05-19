@@ -1,4 +1,5 @@
-#include <kms.h>
+#include <draw.h>
+#include <utils.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -24,7 +25,12 @@ int main() {
     printf("after kms_get_fb\n");
     print_result(&result);
 
-    res(&result, drm);
+
+    for (int i = 0; i < result.num_items; ++i) {
+        ds_kms_item *item = &result.items[i];
+        render_item(item, &drm); 
+    }
+
     for (int i = 0; i < result.num_items; ++i) {
         for (int j = 0; j < result.items[i].num_dma_bufs; ++j) {
             ds_kms_dma_buf *dma_buf = &result.items[i].dma_buf[j];

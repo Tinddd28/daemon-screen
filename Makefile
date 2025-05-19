@@ -1,16 +1,16 @@
 # 	gcc include/util.h src/util.c src/drmcheck.c -o drm_test -ldrm -I/usr/include/libdrm    
 
 CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude -I/usr/include/libdrm -I/usr/include/EGL -I/usr/include/GLES2
-LDFLAGS = -ldrm -lEGL -lGLESv2 -lgbm -L/usr/lib/x86_64-linux-gnu/  
+CFLAGS = -Wall -Wextra -Iinclude -I/usr/include/libdrm
+LDFLAGS = -ldrm -lEGL -lGLESv2 -lgbm
 
 TARGET = drm_test
 
-SRCS = src/main.c src/kms.c src/draw.c
+SRCS = src/main.c  src/kms.c src/utils.c src/draw.c
 
 OBJS = $(SRCS:.c=.o)
 
-DEPS =  include/kms.h
+DEPS =  include/kms.h include/utils.h include/draw.h
 
 # go:
 # 	CGO_CFLAGS="-I/usr/include/libdrm -I./src" CGO_LDFLAGS="-ldrm" go build -o my_program
