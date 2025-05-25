@@ -359,14 +359,13 @@ void *map_dma_buf(int fd, size_t size, uint32_t offset) {
     size_t aligned_offset = (offset / page_size) * page_size;
     size_t extra_offset = offset - aligned_offset;
 
-    void *data = mmap(NULL, page_size + extra_offset, PROT_READ, MAP_SHARED, fd, aligned_offset);
+    void *data = mmap(NULL, page_size + extra_offset, PROT_READ, MAP_SHARED_VALIDATE, fd, aligned_offset);
     if (data == MAP_FAILED) {
         perror("mmap failed\n");
         return NULL;
     }
     return (uint8_t *)data + extra_offset;
 }
-
 void unmap_dma_buf(void *addr, size_t size, size_t offset) {
     size_t page_size = sysconf(_SC_PAGESIZE);
     size_t aligned_offset = (offset / page_size) * page_size;
