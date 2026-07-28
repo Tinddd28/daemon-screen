@@ -71,6 +71,12 @@ sudo ./ds-capture screenshot   # -> screenshot-<N>[-cursor].png на кажду�
 make        # собирает drm_test из src/main.c + src/mydrm.c + src/kms.c
 ```
 
+## Документация
+
+Технические заметки — в **[`docs/`](docs/README.md)**: сквозной конвейер, вводные
+по DRM/KMS и EGL, выбор технологий (что на каждом шаге можно заменить), исходные
+баги и правильная архитектура. Начните с [`docs/README.md`](docs/README.md).
+
 ## Структура
 
 | Файл | Роль |

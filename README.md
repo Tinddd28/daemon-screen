@@ -71,6 +71,13 @@ become master on `open()`, which is why capture "worked" only there before.)
 make        # builds drm_test from src/main.c + src/mydrm.c + src/kms.c
 ```
 
+## Documentation
+
+Technical notes live in **[`docs/`](docs/README.md)** — the end-to-end pipeline,
+the DRM/KMS and EGL primers, design choices (what's swappable at each step), the
+original bugs, and the correct architecture. Start at
+[`docs/README.md`](docs/README.md).
+
 ## Layout
 
 | File | Role |
