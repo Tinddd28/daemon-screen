@@ -37,26 +37,31 @@ system**. The same code path serves two entry points:
 
 ## Build / run
 
-Extra deps for the PoC: `libepoxy`, `mesa`/`libgbm`, `libpng`
-(Arch: `sudo pacman -S libepoxy libpng mesa`).
+Extra deps for the PoC: `libepoxy`, `mesa`/`libgbm`, `libpng`, `libjpeg`
+(Arch: `sudo pacman -S libepoxy libpng libjpeg-turbo mesa`).
+
+Both tools take `-f=png` (default, lossless) or `-f=jpg` (lossy, alpha dropped)
+to pick the output format.
 
 ### Self-test — validate the dma-buf/EGL pipeline (no root, no display)
 
 Round-trips a known pattern (top red / bottom blue) through the exact dma-buf
 import path and checks the read-back pixels. Writes `selftest.png` to the
-current directory (or to the path given as the first argument).
+current directory (or to the path given as an argument).
 
 ```
 make selftest
 ./ds-selftest              # -> selftest.png
 ./ds-selftest out.png      # custom path
+./ds-selftest -f=jpg       # -> selftest.jpg
 ```
 
 ### Screen capture — the same pipeline on real framebuffers (needs root)
 
 ```
 make capture
-sudo ./ds-capture screenshot   # -> screenshot-<N>[-cursor].png per plane
+sudo ./ds-capture screenshot          # -> screenshot-<N>[-cursor].png per plane
+sudo ./ds-capture -f=jpg screenshot   # -> screenshot-<N>[-cursor].jpg
 ```
 
 **Why root:** `drmModeGetFB2` zeroes the GEM handles of other clients'

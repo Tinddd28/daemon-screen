@@ -2,6 +2,7 @@ drm_test
 ds-capture
 ds-selftest
 *.png
+*.jpg
 daemon-screen.code-workspace
 *.o
 *.h.gch

@@ -37,26 +37,31 @@ dma-buf fd  ──▶  EGLImage (EGL_LINUX_DMA_BUF_EXT, с модификато�
 
 ## Сборка / запуск
 
-Дополнительные зависимости PoC: `libepoxy`, `mesa`/`libgbm`, `libpng`
-(Arch: `sudo pacman -S libepoxy libpng mesa`).
+Дополнительные зависимости PoC: `libepoxy`, `mesa`/`libgbm`, `libpng`, `libjpeg`
+(Arch: `sudo pacman -S libepoxy libpng libjpeg-turbo mesa`).
+
+Обе утилиты принимают `-f=png` (по умолчанию, без потерь) или `-f=jpg` (с
+потерями, alpha отбрасывается) для выбора формата вывода.
 
 ### Self-test — проверка конвейера dma-buf/EGL (без root, без дисплея)
 
 Прогоняет известный паттерн (верх красный / низ синий) через тот же путь импорта
 dma-buf и проверяет считанные обратно пиксели. Пишет `selftest.png` в текущую
-директорию (или в путь, переданный первым аргументом).
+директорию (или в путь, переданный аргументом).
 
 ```
 make selftest
 ./ds-selftest              # -> selftest.png
 ./ds-selftest out.png      # свой путь
+./ds-selftest -f=jpg       # -> selftest.jpg
 ```
 
 ### Захват экрана — тот же конвейер на реальных фреймбуферах (нужен root)
 
 ```
 make capture
-sudo ./ds-capture screenshot   # -> screenshot-<N>[-cursor].png на каждую плоскость
+sudo ./ds-capture screenshot          # -> screenshot-<N>[-cursor].png на плоскость
+sudo ./ds-capture -f=jpg screenshot   # -> screenshot-<N>[-cursor].jpg
 ```
 
 **Почему root:** `drmModeGetFB2` обнуляет GEM-хендлы фреймбуферов чужих клиентов,

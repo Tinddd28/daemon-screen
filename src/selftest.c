@@ -21,7 +21,22 @@
 #define H 256
 
 int main(int argc, char **argv) {
-    const char *out = argc > 1 ? argv[1] : "selftest.png";
+    // Args: [-f=png|jpg] [output path]  (defaults: png, "selftest.<ext>")
+    const char *out = NULL;
+    const char *fmt = "png";
+    for (int i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], "-f=", 3) == 0)
+            fmt = argv[i] + 3;
+        else
+            out = argv[i];
+    }
+    const int is_jpg = (strcmp(fmt, "jpg") == 0 || strcmp(fmt, "jpeg") == 0);
+    if (!is_jpg && strcmp(fmt, "png") != 0) {
+        fprintf(stderr, "unknown format '%s' (use -f=png or -f=jpg)\n", fmt);
+        return 2;
+    }
+    if (!out)
+        out = is_jpg ? "selftest.jpg" : "selftest.png";
 
     ds_egl *e = ds_egl_create(NULL);
     if (!e) {
@@ -92,7 +107,9 @@ int main(int argc, char **argv) {
     printf("top  pixel RGBA = %3u %3u %3u %3u (expect red)\n",  top[0], top[1], top[2], top[3]);
     printf("bottom pixel RGBA = %3u %3u %3u %3u (expect blue)\n", bot[0], bot[1], bot[2], bot[3]);
 
-    if (ds_save_png(out, rgba, ow, oh) == 0)
+    const int save_rc = is_jpg ? ds_save_jpeg(out, rgba, ow, oh, 90)
+                               : ds_save_png(out, rgba, ow, oh);
+    if (save_rc == 0)
         printf("wrote %s (%ux%u)\n", out, ow, oh);
 
     free(rgba);

@@ -60,7 +60,21 @@ static int find_and_capture(ds_drm *drm, ds_kms_result *result, char *card_out, 
 }
 
 int main(int argc, char **argv) {
-    const char *out_prefix = argc > 1 ? argv[1] : "screenshot";
+    // Args: [-f=png|jpg] [prefix]  (order-independent; defaults: png, "screenshot")
+    const char *out_prefix = "screenshot";
+    const char *fmt = "png";
+    for (int i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], "-f=", 3) == 0)
+            fmt = argv[i] + 3;
+        else
+            out_prefix = argv[i];
+    }
+    const int is_jpg = (strcmp(fmt, "jpg") == 0 || strcmp(fmt, "jpeg") == 0);
+    if (!is_jpg && strcmp(fmt, "png") != 0) {
+        fprintf(stderr, "unknown format '%s' (use -f=png or -f=jpg)\n", fmt);
+        return 2;
+    }
+    const char *ext = is_jpg ? "jpg" : "png";
 
     ds_drm drm;
     drm.drm_fd = -1;
@@ -110,9 +124,11 @@ int main(int argc, char **argv) {
         }
 
         char path[512];
-        snprintf(path, sizeof(path), "%s-%d%s.png", out_prefix, i,
-                 it->is_cursor ? "-cursor" : "");
-        if (ds_save_png(path, rgba, w, h) == 0) {
+        snprintf(path, sizeof(path), "%s-%d%s.%s", out_prefix, i,
+                 it->is_cursor ? "-cursor" : "", ext);
+        const int rc = is_jpg ? ds_save_jpeg(path, rgba, w, h, 90)
+                              : ds_save_png(path, rgba, w, h);
+        if (rc == 0) {
             printf("  -> %s\n", path);
             saved++;
         }

@@ -47,7 +47,11 @@ void ds_egl_destroy(ds_egl *e);
 int ds_egl_capture_dmabuf(ds_egl *e, const ds_dmabuf_desc *desc,
                           uint8_t **out_rgba, uint32_t *out_w, uint32_t *out_h);
 
-// Write an RGBA8 buffer (top-to-bottom) to a PNG file.
+// Write an RGBA8 buffer (top-to-bottom) to a PNG file (lossless, keeps alpha).
 int ds_save_png(const char *path, const uint8_t *rgba, uint32_t w, uint32_t h);
+
+// Write an RGBA8 buffer (top-to-bottom) to a JPEG file (lossy; alpha discarded).
+// quality is 0-100 (higher = better/larger).
+int ds_save_jpeg(const char *path, const uint8_t *rgba, uint32_t w, uint32_t h, int quality);
 
 #endif

@@ -3,8 +3,8 @@ CFLAGS = -Wall -Wextra -Iinclude -I/usr/include/libdrm
 LDFLAGS = -ldrm
 
 # Extra libs for the EGL/GBM capture pipeline.
-EGL_CFLAGS = $(shell pkg-config --cflags epoxy gbm libpng)
-EGL_LIBS   = $(shell pkg-config --libs epoxy gbm libpng) -lm
+EGL_CFLAGS = $(shell pkg-config --cflags epoxy gbm libpng libjpeg)
+EGL_LIBS   = $(shell pkg-config --libs epoxy gbm libpng libjpeg) -lm
 
 # --- PoC screen capture (run as root): KMS dma-buf -> EGL -> PNG ---
 capture: src/kms.c src/egl_capture.c src/capture_main.c

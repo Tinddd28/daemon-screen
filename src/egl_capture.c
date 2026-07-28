@@ -9,6 +9,7 @@
 
 #include <drm_fourcc.h>
 #include <png.h>
+#include <jpeglib.h>
 
 // The framebuffer we sample from is tiled/compressed (e.g. AMD DCC) and may be
 // XRGB2101010 etc., so we cannot mmap it directly. We import it as an external
@@ -348,6 +349,41 @@ int ds_save_png(const char *path, const uint8_t *rgba, uint32_t w, uint32_t h) {
 
     png_write_end(png, info);
     png_destroy_write_struct(&png, &info);
+    fclose(fp);
+    return 0;
+}
+
+int ds_save_jpeg(const char *path, const uint8_t *rgba, uint32_t w, uint32_t h, int quality) {
+    FILE *fp = fopen(path, "wb");
+    if (!fp) {
+        fprintf(stderr, "failed to open %s: %s\n", path, strerror(errno));
+        return -1;
+    }
+
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, fp);
+
+    cinfo.image_width = w;
+    cinfo.image_height = h;
+    // Feed RGBA directly: libjpeg-turbo's JCS_EXT_RGBA reads 4 bytes/pixel and
+    // ignores the alpha channel, so no manual RGBA->RGB pass is needed.
+    cinfo.input_components = 4;
+    cinfo.in_color_space = JCS_EXT_RGBA;
+    jpeg_set_defaults(&cinfo);
+    jpeg_set_quality(&cinfo, quality, TRUE);
+
+    jpeg_start_compress(&cinfo, TRUE);
+    // Same row order as PNG: read-back row 0 is the top of the source.
+    while (cinfo.next_scanline < h) {
+        JSAMPROW row = (JSAMPROW)(rgba + (size_t)cinfo.next_scanline * w * 4);
+        jpeg_write_scanlines(&cinfo, &row, 1);
+    }
+    jpeg_finish_compress(&cinfo);
+    jpeg_destroy_compress(&cinfo);
+
     fclose(fp);
     return 0;
 }
