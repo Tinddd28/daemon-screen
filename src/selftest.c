@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Shibakov Nikita <tind.nik.28@gmail.com>
+
 // Self-test for the EGL capture pipeline that needs no root and no KMS access.
 //
 // It creates a linear GBM buffer, paints a known pattern into it (top half red,

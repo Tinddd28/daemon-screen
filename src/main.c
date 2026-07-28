@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Shibakov Nikita <tind.nik.28@gmail.com>
+
 #include <mydrm.h>
 #include <kms.h>
 #include <errno.h>

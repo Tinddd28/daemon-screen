@@ -107,3 +107,13 @@ sudo apt install libdrm-dev gcc make build-essential
 groups                              # проверить
 sudo usermod -aG video "username"   # добавить
 ```
+
+## Лицензия
+
+**GNU General Public License v3.0 или новее** — см. [LICENSE](LICENSE).
+Copyright © 2026 Shibakov Nikita &lt;tind.nik.28@gmail.com&gt;.
+
+GPL выбрана осознанно: любая производная работа тоже обязана оставаться свободной
+и открытой под GPL, поэтому этот код нельзя встроить в закрытый проприетарный
+продукт (например, коммерческую DLP). Важно: копилефт гарантирует лишь
+**открытость исходников** — по своей природе он не ограничивает область применения.

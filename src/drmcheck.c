@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Shibakov Nikita <tind.nik.28@gmail.com>
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -8,7 +11,7 @@
 // map for framebuffer
 #include <sys/mman.h>
 #include <unistd.h>
-// drm headers 
+// drm headers
 // TODO: replace it with <drm/drm.h>, <drm/drm_mode.h>, and rewrite getting data
 // TODO: split on headers and source file this code
 // TODO: just for fun (^_^)
@@ -68,7 +71,7 @@ static uint32_t find_crtc(int fd, drmModeRes *res, drmModeConnector *conn,
             *taken_crtc |= bit;
             return res->crtcs[i];
         }
-    
+
         drmModeFreeEncoder(enc);
     }
 
@@ -203,5 +206,5 @@ int main() {
     }
 
     drmModeFreeResources(resources);
-    
+
 }

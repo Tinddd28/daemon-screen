@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Shibakov Nikita <tind.nik.28@gmail.com>
+
 // PoC screen capture: enumerate KMS planes, export their framebuffers as
 // dma-bufs and read them back as PNG via the EGL pipeline.
 //

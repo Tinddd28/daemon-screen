@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 Shibakov Nikita <tind.nik.28@gmail.com>
+
 #include <mydrm.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -288,4 +291,3 @@ void save_framebuffer(const char *path, struct drm_device *dev) {
     fclose(fp);
     fprintf(stderr, "saved framebuffer to %s\n", path);
 }
-

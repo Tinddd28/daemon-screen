@@ -107,3 +107,13 @@ ACLs, but `ds-capture` needs root anyway (see above), so root already covers it.
 groups                              # check
 sudo usermod -aG video "username"   # add
 ```
+
+## License
+
+**GNU General Public License v3.0 or later** — see [LICENSE](LICENSE).
+Copyright © 2026 Shibakov Nikita &lt;tind.nik.28@gmail.com&gt;.
+
+GPL is a deliberate choice: any derivative work must also stay free and
+open-source under the GPL, so this code cannot be absorbed into a closed-source
+product (e.g. a proprietary DLP tool). Note that copyleft only guarantees the
+*source stays open* — by design it does not restrict the field of use.
