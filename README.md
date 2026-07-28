@@ -1,35 +1,97 @@
-# daemon-screen (in further will not a daemon ^_^)
+🌐 **English** · [Русский](README.ru.md)
 
-The functionality was based on [GPU Screen Recorder](https://git.dec05eba.com/gpu-screen-recorder/about/) ([flathub link](https://flathub.org/apps/com.dec05eba.gpu_screen_recorder))
+# daemon-screen
 
-## Build Go:
+**Proof of Concept: rendering a DRM/KMS dma-buf framebuffer through EGL.**
+
+This is not a finished product. It is a PoC that demonstrates one specific
+thing end-to-end: taking a **dma-buf** framebuffer, importing it into a headless
+**EGL/GBM** context, letting the GPU detile/convert it, reading the pixels back
+and writing them to PNG. The KMS screen-capture path is built on top of that
+core, but the point of the project is the **dma-buf → EGL → pixels** interaction
+itself.
+
+Originally explored as part of a diploma project focused on DRM/KMS internals;
+the capture idea is modeled on
+[GPU Screen Recorder](https://git.dec05eba.com/gpu-screen-recorder/about/)
+([flathub](https://flathub.org/apps/com.dec05eba.gpu_screen_recorder)).
+
+## The PoC pipeline
+
 ```
-CGO_CFLAGS="-I/usr/include/libdrm -I./src" CGO_LDFLAGS="-ldrm" go build -o my_program
+dma-buf fd  ──▶  EGLImage (EGL_LINUX_DMA_BUF_EXT, with modifiers)
+            ──▶  external OES texture
+            ──▶  render into an RGBA8 FBO   (GPU detile + format convert)
+            ──▶  glReadPixels
+            ──▶  PNG (libpng)
 ```
 
-## Build C:
+Runs headless on a render node, so it needs **no DRM master and no window
+system**. The same code path serves two entry points:
+
+- `ds-selftest` — feeds a **synthetic** dma-buf (a GBM buffer painted with a
+  known pattern) through the pipeline. Proves the whole flow works **without
+  root and without a display**.
+- `ds-capture` — feeds **real** KMS framebuffers (the compositor's scanned-out
+  planes) through the same pipeline to produce a screenshot.
+
+## Build / run
+
+Extra deps for the PoC: `libepoxy`, `mesa`/`libgbm`, `libpng`
+(Arch: `sudo pacman -S libepoxy libpng mesa`).
+
+### Self-test — validate the dma-buf/EGL pipeline (no root, no display)
+
+Round-trips a known pattern (top red / bottom blue) through the exact dma-buf
+import path and checks the read-back pixels. Writes `selftest.png` to the
+current directory (or to the path given as the first argument).
+
 ```
-make // for build executable file
-
-make clean // for clean build 
+make selftest
+./ds-selftest              # -> selftest.png
+./ds-selftest out.png      # custom path
 ```
 
+### Screen capture — the same pipeline on real framebuffers (needs root)
 
+```
+make capture
+sudo ./ds-capture screenshot   # -> screenshot-<N>[-cursor].png per plane
+```
 
-## Dependencies
-**Install on Debian like distrs**: 
+**Why root:** `drmModeGetFB2` zeroes the GEM handles of other clients'
+framebuffers unless the caller is the DRM master or has `CAP_SYS_ADMIN`. A
+Wayland compositor holds the master and won't give it up, so capturing another
+client's framebuffer requires privilege. (In a bare TTY with no compositor you
+become master on `open()`, which is why capture "worked" only there before.)
+
+### Legacy scanner (KMS enumeration only)
+
+```
+make        # builds drm_test from src/main.c + src/mydrm.c + src/kms.c
+```
+
+## Layout
+
+| File | Role |
+|------|------|
+| `src/egl_capture.c` / `include/egl_capture.h` | **the PoC core** — dma-buf → EGL → RGBA → PNG |
+| `src/selftest.c` | synthetic dma-buf driver (`ds-selftest`) |
+| `src/capture_main.c` | real KMS-capture driver (`ds-capture`) |
+| `src/kms.c` / `include/kms.h` | KMS plane enumeration, framebuffer → dma-buf export |
+| `src/mydrm.c`, `src/drmcheck.c` | early DRM/KMS experiments (not on the PoC path) |
+
+## Dependencies (base DRM tooling)
+
+**Debian-like:**
 ```
 sudo apt install libdrm-dev gcc make build-essential
+# for the PoC pipeline: libepoxy-dev libgbm-dev libpng-dev
 ```
-If you want use Go also you need installed Go. [How to do this](https://go.dev/doc/install)
-### Important points
-User should be in `video` group:
 
-- How to check:
+**Note on the `video` group:** on a live session logind grants device access via
+ACLs, but `ds-capture` needs root anyway (see above), so root already covers it.
 ```
-groups
-```
-- How to add:
-```
-sudo usermod -aG video "username"
+groups                              # check
+sudo usermod -aG video "username"   # add
 ```

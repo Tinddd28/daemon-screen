@@ -259,7 +259,7 @@ void save_framebuffer(const char *path, struct drm_device *dev) {
     uint32_t image_size = dev->width * dev->height;
     uint32_t file_size = 54 + image_size;
 
-    fp = open(path, "wb");
+    fp = fopen(path, "wb");
     if (!fp) {
         fprintf(stderr, "failed to open %s: %s\n", path, strerror(errno));
         return;

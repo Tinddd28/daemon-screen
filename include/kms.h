@@ -1,5 +1,5 @@
 #ifndef KMS_H
-#define KMS_h
+#define KMS_H
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 
