@@ -117,6 +117,9 @@ void map_crtc_to_connector_ids(ds_drm *drm, connector_to_crtc_map *c2crtc_map) {
     }
 
     for (int i = 0; i < res->count_connectors; ++i) {
+        if (c2crtc_map->num_maps >= MAX_CONNECTORS)
+            break;
+
         drmModeConnectorPtr conn = drmModeGetConnectorCurrent(drm->drm_fd, res->connectors[i]);
         if (!conn) {
             fprintf(stderr, "skipping connector %d\n", res->connectors[i]);
@@ -126,22 +129,21 @@ void map_crtc_to_connector_ids(ds_drm *drm, connector_to_crtc_map *c2crtc_map) {
         uint64_t crtc_id = 0;
         connector_get_property_by_name(drm->drm_fd, conn, "CRTC_ID", &crtc_id);
         if (crtc_id == 0) {
-            fprintf(stderr, "skipping connector %d with no CRTC_ID\n", res->connectors[i]);
+            // No active CRTC -> connector is not driving a display right now.
             drmModeFreeConnector(conn);
             continue;
         }
 
-        uint64_t hdr_ouput_metadata_blob_id = 0;
-        connector_get_property_by_name(drm->drm_fd, conn, "HDR_OUTPUT_METADATA", &hdr_ouput_metadata_blob_id);
-        if (hdr_ouput_metadata_blob_id == 0) {
-            fprintf(stderr, "skipping connector %d with no HDR_OUTPUT_METADATA\n", res->connectors[i]);
-            drmModeFreeConnector(conn);
-            continue;
-        }
+        // HDR metadata is optional: SDR connectors report the property with a
+        // blob id of 0. Record it if present, but never require it.
+        uint64_t hdr_output_metadata_blob_id = 0;
+        connector_get_property_by_name(drm->drm_fd, conn, "HDR_OUTPUT_METADATA", &hdr_output_metadata_blob_id);
 
-        c2crtc_map->maps[c2crtc_map->num_maps].connector_id = res->connectors[i];
-        c2crtc_map->maps[c2crtc_map->num_maps].crtc_id = crtc_id;
-        c2crtc_map->maps[c2crtc_map->num_maps].hdr_metadata_blob_id = hdr_ouput_metadata_blob_id;
+        const int idx = c2crtc_map->num_maps;
+        c2crtc_map->maps[idx].connector_id = res->connectors[i];
+        c2crtc_map->maps[idx].crtc_id = crtc_id;
+        c2crtc_map->maps[idx].hdr_metadata_blob_id = hdr_output_metadata_blob_id;
+        c2crtc_map->num_maps++;
 
         drmModeFreeConnector(conn);
     }
@@ -180,24 +182,29 @@ int done(drmModePlaneResPtr planes, ds_kms_result *result, int ret) {
     if (planes) {
         drmModeFreePlaneResources(planes);
     }
-    if (result->num_items > 0) 
+
+    // Success if we captured at least one plane; per-plane failures recorded in
+    // err_msg do not fail the whole scan.
+    if (result->num_items > 0) {
         result->result = KMS_RESULT_OK;
-    if (result->result == KMS_RESULT_OK) {
-        ret = 0;
-    } else {
-        for (int i = 0; i < result->num_items; ++i) {
-            for (int j = 0; j < result->items[i].num_dma_bufs; ++j) {
-                ds_kms_dma_buf *dma_buf = &result->items[i].dma_buf[j];
-                if (dma_buf->fd > 0) {
-                    close(dma_buf->fd);
-                    dma_buf->fd = -1;
-                }
-            }
-            result->items[i].num_dma_bufs = 0;
-        }
-        result->num_items = 0;
+        return 0;
     }
-    return ret;
+
+    // Nothing captured: release any partial dma-buf fds and report failure.
+    if (result->result == KMS_RESULT_OK)
+        result->result = KMS_RESULT_FAILED_TO_GET_PLANES;
+    for (int i = 0; i < result->num_items; ++i) {
+        for (int j = 0; j < result->items[i].num_dma_bufs; ++j) {
+            ds_kms_dma_buf *dma_buf = &result->items[i].dma_buf[j];
+            if (dma_buf->fd >= 0) {
+                close(dma_buf->fd);
+                dma_buf->fd = -1;
+            }
+        }
+        result->items[i].num_dma_bufs = 0;
+    }
+    result->num_items = 0;
+    return ret < 0 ? ret : -1;
 }
 
 void drm_mode_cleanup_handles(int drmfd, drmModeFB2Ptr drmfb) {
@@ -228,9 +235,7 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
 
     connector_to_crtc_map c2crtc_map;
     c2crtc_map.num_maps = 0;
-    printf("before map crtc2c\n");
     map_crtc_to_connector_ids(drm, &c2crtc_map);
-    printf("after map crtc2c\n");
     drmModePlaneResPtr planes = drmModeGetPlaneResources(drm->drm_fd);
     if (!planes) {
         fprintf(stderr, "failed to get plane resources\n");
@@ -238,54 +243,56 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
     }
     printf("planeRes count: %d\n", planes->count_planes);
     for (uint32_t i = 0; i < planes->count_planes; ++i) {
-        drmModePlanePtr plane = NULL;
-        drmModeFB2Ptr drmfb = NULL;
-        plane = drmModeGetPlane(drm->drm_fd, planes->planes[i]);
+        if (result->num_items >= DS_KMS_MAX_ITEMS)
+            break;
+
+        drmModePlanePtr plane = drmModeGetPlane(drm->drm_fd, planes->planes[i]);
         if (!plane) {
-            snprintf(result->err_msg, sizeof(result->err_msg), "failed to get drm plane with id %u, error: %s\n", planes->planes[i], strerror(errno));
-            if(drmfb)
-                drmModeFreeFB2(drmfb);
-            if(plane)
-                drmModeFreePlane(plane);
+            snprintf(result->err_msg, sizeof(result->err_msg),
+                     "failed to get drm plane with id %u, error: %s", planes->planes[i], strerror(errno));
             continue;
         }
 
-
-        if (!plane->fb_id || plane->fb_id == 0) {
-            if(drmfb)
-                drmModeFreeFB2(drmfb);
-            if(plane)
-                drmModeFreePlane(plane); 
+        if (!plane->fb_id) {
+            // Plane is not currently scanning out anything.
+            drmModeFreePlane(plane);
             continue;
         }
-        printf("plane fb_id: %d, #(%d)\n", plane->fb_id, i+1);
-        drmfb = drmModeGetFB2(drm->drm_fd, plane->fb_id);
+
+        int x = 0, y = 0, src_x = 0, src_y = 0, src_w = 0, src_h = 0;
+        plane_property_mask mask = plane_get_properties(drm->drm_fd, plane->plane_id,
+                                                        &x, &y, &src_x, &src_y, &src_w, &src_h);
+        if (!(mask & PLANE_PROPERTY_IS_PRIMARY) && !(mask & PLANE_PROPERTY_IS_CURSOR)) {
+            drmModeFreePlane(plane);
+            continue;
+        }
+
+        printf("plane fb_id: %u, #(%u)\n", plane->fb_id, i + 1);
+        drmModeFB2Ptr drmfb = drmModeGetFB2(drm->drm_fd, plane->fb_id);
         if (!drmfb) {
-            snprintf(result->err_msg, sizeof(result->err_msg), "failed to get drm fb with id %u, error: %s\n", plane->fb_id, strerror(errno));
-            if(drmfb)
-                drmModeFreeFB2(drmfb);
-            if(plane)
-                drmModeFreePlane(plane);
+            snprintf(result->err_msg, sizeof(result->err_msg),
+                     "failed to get drm fb with id %u, error: %s", plane->fb_id, strerror(errno));
+            drmModeFreePlane(plane);
             continue;
         }
         if (!drmfb->handles[0]) {
-            result->result = KMS_RESULT_FAILED_TO_GET_PLANE;
-            snprintf(result->err_msg, sizeof(result->err_msg), "drmfb handle is NULL");
-            drm_mode_cleanup_handles(drm->drm_fd, drmfb);        
+            // Handles are zeroed when the caller is neither DRM master nor has
+            // CAP_SYS_ADMIN. Running as root (the DLP daemon case) avoids this.
+            snprintf(result->err_msg, sizeof(result->err_msg),
+                     "drmfb handle is NULL (need root/CAP_SYS_ADMIN to read other clients' framebuffers)");
+            drmModeFreeFB2(drmfb);
+            drmModeFreePlane(plane);
             continue;
         }
-        
-        int x = 0, y = 0, src_x = 0, src_y = 0, src_w = 0, src_h = 0;
-        plane_property_mask mask = plane_get_properties(drm->drm_fd, plane->plane_id, &x, &y, &src_x, &src_y, &src_w, &src_h);
-        if (!(mask & PLANE_PROPERTY_IS_PRIMARY) && !(mask & PLANE_PROPERTY_IS_CURSOR)) 
-            continue;
 
         int fb_fds[DS_KMS_MAX_DMA_BUFS];
         const int num_fb_fds = drm_prime_handles_to_fds(drm, drmfb, fb_fds);
         if (num_fb_fds == 0) {
-            result->result = KMS_RESULT_FAILED_TO_GET_PLANE;
-            snprintf(result->err_msg, sizeof(result->err_msg), "failed to get fd from drm handle, error: %s", strerror(errno));
+            snprintf(result->err_msg, sizeof(result->err_msg),
+                     "failed to get fd from drm handle, error: %s", strerror(errno));
             drm_mode_cleanup_handles(drm->drm_fd, drmfb);
+            drmModeFreeFB2(drmfb);
+            drmModeFreePlane(plane);
             continue;
         }
 
@@ -324,30 +331,38 @@ int kms_get_fb(ds_drm *drm, ds_kms_result *result) {
         }
 
         ++result->num_items;
+
+        // The exported dma-buf fds keep the buffer alive; close the GEM handles
+        // so we don't leak one per plane per call.
+        drm_mode_cleanup_handles(drm->drm_fd, drmfb);
+        drmModeFreeFB2(drmfb);
+        drmModeFreePlane(plane);
     }
-    return ret;
+    return done(planes, result, ret);
 }
 
 int open_drm_device(const char *card, ds_drm *drm) {
-    int res = 0;
-
-    drm->drm_fd = open(card, O_RDONLY);
+    drm->drm_fd = open(card, O_RDONLY | O_CLOEXEC);
     if (drm->drm_fd < 0) {
-        fprintf(stderr, "failed to open %s, error: %s", card, strerror(errno));
-        res = 2;
-        close(drm->drm_fd);
-        return res;
+        const int err = errno;
+        fprintf(stderr, "failed to open %s, error: %s\n", card, strerror(err));
+        return -err;
     }
-    printf("drm device opened\n");
+    printf("drm device opened: %s (fd=%d)\n", card, drm->drm_fd);
+
     if (drmSetClientCap(drm->drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
-        fprintf(stderr, "drmSetClientCap: DRM_CLIENT_CAP_UNIVERSAL_PLANES failed, error: %s\n", strerror(errno));
-        res = 2;
+        fprintf(stderr, "drmSetClientCap DRM_CLIENT_CAP_UNIVERSAL_PLANES failed: %s\n", strerror(errno));
         close(drm->drm_fd);
-        return res;
+        drm->drm_fd = -1;
+        return -EOPNOTSUPP;
     }
 
-    if (drmSetClientCap(drm->drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) != 0){
-        fprintf(stderr, "drmSetClientCap DRM_CLIENT_CAP_ATOMIC failed, error: %s", strerror(errno));
+    // Needed for the connector CRTC_ID property used to map planes to
+    // connectors. Non-fatal: without it we still capture pixels, just without
+    // the connector_id association.
+    if (drmSetClientCap(drm->drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) != 0) {
+        fprintf(stderr, "warning: DRM_CLIENT_CAP_ATOMIC failed (%s); "
+                        "connector mapping will be unavailable\n", strerror(errno));
     }
-    return res;
+    return 0;
 }

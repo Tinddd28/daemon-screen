@@ -1,7 +1,9 @@
 drm_test
+ds-capture
+ds-selftest
+*.png
 daemon-screen.code-workspace
 *.o
 *.h.gch
 .VSCodeCounter
 .idea/
-my_program

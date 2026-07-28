@@ -1,19 +1,24 @@
-# 	gcc include/util.h src/util.c src/drmcheck.c -o drm_test -ldrm -I/usr/include/libdrm    
-
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude -I/usr/include/libdrm
 LDFLAGS = -ldrm
 
+# Extra libs for the EGL/GBM capture pipeline.
+EGL_CFLAGS = $(shell pkg-config --cflags epoxy gbm libpng)
+EGL_LIBS   = $(shell pkg-config --libs epoxy gbm libpng) -lm
+
+# --- PoC screen capture (run as root): KMS dma-buf -> EGL -> PNG ---
+capture: src/kms.c src/egl_capture.c src/capture_main.c
+	$(CC) $(CFLAGS) $(EGL_CFLAGS) $^ -o ds-capture $(LDFLAGS) $(EGL_LIBS)
+
+# --- No-root self-test of the EGL import/readback/PNG pipeline ---
+selftest: src/egl_capture.c src/selftest.c
+	$(CC) $(CFLAGS) $(EGL_CFLAGS) $^ -o ds-selftest $(LDFLAGS) $(EGL_LIBS)
+
+# --- Legacy scanner (kms enumeration only) ---
 TARGET = drm_test
-
 SRCS = src/main.c src/mydrm.c src/kms.c
-
 OBJS = $(SRCS:.c=.o)
-
 DEPS = include/mydrm.h include/kms.h
-
-go:
-	CGO_CFLAGS="-I/usr/include/libdrm -I./src" CGO_LDFLAGS="-ldrm" go build -o my_program
 
 all: $(TARGET)
 
@@ -24,7 +29,6 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(TARGET) && rm my_program
+	rm -f $(OBJS) $(TARGET) ds-capture ds-selftest
 
-
-.PHONY: all clean
+.PHONY: all capture selftest clean

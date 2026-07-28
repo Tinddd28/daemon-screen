@@ -37,5 +37,5 @@ int main() {
     }
     result.num_items = 0;
 
-    printf("something: %u\n", result.items);
-} 
+    return 0;
+}
